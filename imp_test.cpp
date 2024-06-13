@@ -8,6 +8,20 @@
 #include "imp_interpreter.hh"
 #include "imp_typechecker.hh"
 
+void testScanner(Scanner scanner){
+	cout << "Testing Scanner: " << endl;
+	Token *tk = scanner.nextToken();
+	while (tk->type != Token::END) {
+		cout << Token::token_names[tk->type] << " " << tk->lexema << endl;
+		delete tk;
+		tk = scanner.nextToken();
+	}
+
+	cout << "last token " << Token::token_names[tk->type] << endl;
+	cout << endl;
+	delete tk;
+}
+
 int main(int argc, const char *argv[]) {
 
 	Program *program;
@@ -21,6 +35,9 @@ int main(int argc, const char *argv[]) {
 	std::stringstream buffer;
 	buffer << t.rdbuf();
 	Scanner scanner(buffer.str());
+
+	// Testing Scanner
+	testScanner(scanner);
 
 	Parser parser(&scanner);
 	program = parser.parse();  // el parser construye la aexp

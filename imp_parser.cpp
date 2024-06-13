@@ -186,8 +186,7 @@ bool Parser::advance() {
 		current = scanner->nextToken();
 		previous = temp;
 		if (check(Token::ERR)) {
-			cout << "Parse error, unrecognised character: " << current->lexema << endl;
-			exit(0);
+			parserError("Unrecognised character: " + current->lexema);
 		}
 		return true;
 	}
@@ -203,6 +202,10 @@ void Parser::parserError(string s) {
 	exit(0);
 }
 
+void Parser::printCurrentToken() {
+	cout << "Current Token: " << Token::token_names[current->type] << endl;
+}
+
 Parser::Parser(Scanner *sc) : scanner(sc) {
 	previous = current = NULL;
 	return;
@@ -211,15 +214,13 @@ Parser::Parser(Scanner *sc) : scanner(sc) {
 Program *Parser::parse() {
 	current = scanner->nextToken();
 	if (check(Token::ERR)) {
-		cout << "Error en scanner - caracter invalido" << endl;
-		exit(0);
+		parserError("Invalid character: " + current->lexema);
 	}
 	Program *p = parseProgram();
 	if (current->type != Token::END) {
-		cout << "Esperaba fin-de-input, se encontro " << current << endl;
 		delete p;
 		p = NULL;
-		exit(0);
+		parserError("Expecting end-of-input, found: " + current->lexema);
 	}
 
 	if (current) delete current;
@@ -239,21 +240,33 @@ Body *Parser::parseBody() {
 
 VarDec *Parser::parseVarDec() {
 	VarDec *vd = NULL;
+
 	if (match(Token::VAR)) {
-		string comment;
-		if (!match(Token::ID)) parserError("Expecting type in var declaration");
+		Comment* comment = NULL;
+
+		if (!match(Token::ID))
+			parserError("Expecting type in var declaration");
+
 		string var, type = previous->lexema;
 		list<string> vars;
-		if (!match(Token::ID)) parserError("Expecting id in var declaration");
+
+		if (!match(Token::ID))
+			parserError("Expecting id in var declaration");
+
 		var = previous->lexema;
 		vars.push_back(var);
+
 		while (match(Token::COMMA)) {
-			if (!match(Token::ID)) parserError("Expecting id in comma in var declaration");
+			if (!match(Token::ID))
+				parserError("Expecting id in comma in var declaration");
 			var = previous->lexema;
 			vars.push_back(var);
 		}
-		if (!match(Token::SEMICOLON)) parserError("Expecting semicolon at end of var declaration");
-		if (match(Token::COMMENT)) comment = previous->lexema;
+
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of var declaration");
+
+		comment = parseCommment();
 
 		vd = new VarDec(type, vars, comment);
 	}
@@ -264,6 +277,7 @@ VarDec *Parser::parseVarDec() {
 VarDecList *Parser::parseVarDecList() {
 	VarDecList *vdl = new VarDecList();
 	VarDec *vd;
+
 	vd = parseVarDec();
 	while (vd != NULL) {
 		vdl->add(vd);
@@ -274,9 +288,11 @@ VarDecList *Parser::parseVarDecList() {
 
 StatementList *Parser::parseStatementList() {
 	StatementList *p = new StatementList();
-	p->add(parseStatement());
-	while (match(Token::SEMICOLON)) {
-		p->add(parseStatement());
+	Stm* stm;
+	stm = parseStatement();
+	while (stm != NULL) {
+		p->add(stm);
+		stm = parseStatement();
 	}
 	return p;
 }
@@ -289,52 +305,81 @@ Stm *Parser::parseStatement() {
 	Stm *s = NULL;
 	Exp *e;
 	Body *tb, *fb;
-	string comment;
+	Comment *comment;
+
+	// AssignStatement Parser
 	if (match(Token::ID)) {
 		string lex = previous->lexema;
 		if (!match(Token::ASSIGN)) {
-			cout << "Error: esperaba =" << endl;
-			exit(0);
+			parserError("Expecting assignment (=) operator");
 		}
-		if (match(Token::COMMENT))
-			comment = previous->lexema;
-		s = new AssignStatement(lex, parseBExp(), comment);
-		//memoria_update(lex, v);
+
+		e = parseBExp();
+
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of AssigmentStatement declaration");
+
+		comment = parseCommment();
+
+		s = new AssignStatement(lex, e, comment);
+
+	// PrintStatement Parser
 	} else if (match(Token::PRINT)) {
 		if (!match(Token::LPAREN)) {
-			cout << "Error: esperaba ( " << endl;
-			exit(0);
+			parserError("Expecting left parenthesis '(' ");
 		}
 		e = parseBExp();
 		if (!match(Token::RPAREN)) {
-			cout << "Error: esperaba )" << endl;
-			exit(0);
+			parserError("Expecting right parenthesis ')' ");
 		}
-		s = new PrintStatement(e);
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of PrintStatement declaration");
+
+		comment = parseCommment();
+
+		s = new PrintStatement(e, comment);
+
+	// IfStatement Parser
 	} else if (match(Token::IF)) {
 		e = parseBExp();
-		if (!match(Token::THEN))
-			parserError("Esperaba 'then'");
+		if (!match(Token::THEN)) {
+			parserError("Expecting 'then'");
+		}
+
 		tb = parseBody();
 		fb = NULL;
 		if (match(Token::ELSE)) {
 			fb = parseBody();
 		}
-		if (!match(Token::ENDIF))
-			parserError("Esperaba 'endif'");
-		s = new IfStatement(e, tb, fb);
+		if (!match(Token::ENDIF)) {
+			parserError("Expecting 'endif'");
+		}
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of IfStatement declaration");
+
+		comment = parseCommment();
+
+		s = new IfStatement(e, tb, fb, comment);
+
+	// WhileStatement Parser
 	} else if (match(Token::WHILE)) {
 		e = parseBExp();
-		if (!match(Token::DO))
-			parserError("Esperaba 'do'");
+		if (!match(Token::DO)) {
+			parserError("Expecting 'do'");
+		}
+
 		tb = parseBody();
-		if (!match(Token::ENDWHILE))
-			parserError("Esperaba 'endwhile'");
-		s = new WhileStatement(e, tb);
-	} else {
-		cout << "No se encontro Statement" << endl;
-		exit(0);
+		if (!match(Token::ENDWHILE)) {
+			parserError("expecting 'endwhile'");
+		}
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of statement declaration");
+
+		comment = parseCommment();
+
+		s = new WhileStatement(e, tb, comment);
 	}
+
 	return s;
 }
 
@@ -427,16 +472,19 @@ Exp *Parser::parseFactor() {
 	if (match(Token::FALSE)) {
 		return new BoolExp(false);
 	}
-	cout << "Couldn't find match for token: " << current << endl;
-	exit(0);
+
+	parserError("Couldn't find match for token: " + current->lexema);
+	return NULL;
 }
 
-
-
-
-
-
-
+// ParseComment
+Comment *Parser::parseCommment() {
+	Comment *c = NULL;
+	if (match(Token::COMMENT)) {
+		c = new Comment(previous->lexema);
+	}
+	return c;
+}
 
 
 // ---------------------------------------------------

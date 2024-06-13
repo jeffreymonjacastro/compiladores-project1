@@ -21,7 +21,6 @@ void ImpPrinter::visit(VarDecList *s) {
 	list<VarDec *>::iterator it;
 	for (it = s->vdlist.begin(); it != s->vdlist.end(); ++it) {
 		(*it)->accept(this);
-		cout << ";" << endl;
 	}
 	return;
 }
@@ -35,44 +34,60 @@ void ImpPrinter::visit(VarDec *vd) {
 		first = false;
 		cout << *it;
 	}
-	return;
+
+	if (vd->cmt == NULL){
+		cout << ";" << endl;
+		return;
+	}
+
+	cout << "; " << vd->cmt->comment << endl;
 }
 
 void ImpPrinter::visit(StatementList *s) {
-	cout << "{" << endl;
+//	cout << "{" << endl;
 	list<Stm *>::iterator it;
 	for (it = s->slist.begin(); it != s->slist.end(); ++it) {
 		(*it)->accept(this);
-		cout << ";" << endl;
 	}
-	cout << "}" << endl;
-	return;
+//	cout << "}" << endl;
 }
 
 void ImpPrinter::visit(AssignStatement *s) {
 	cout << s->id << " = ";
 	s->rhs->accept(this);
-	return;
+
+	if (s->cmt == NULL){
+		cout << ";" << endl;
+		return;
+	}
+
+	cout << "; " << s->cmt->comment << endl;
 }
 
 void ImpPrinter::visit(PrintStatement *s) {
 	cout << "print(";
 	s->e->accept(this);
 	cout << ")";
-	return;
+
+	if (s->cmt == NULL){
+		cout << ";" << endl;
+		return;
+	}
+
+	cout << "; " << s->cmt->comment << endl;
 }
 
 void ImpPrinter::visit(IfStatement *s) {
 	cout << "if (";
 	s->cond->accept(this);
-	cout << ") then" << endl;;
+	cout << ") then {" << endl;;
 	s->tbody->accept(this);
 	if (s->fbody != NULL) {
-		cout << "else" << endl;
+		cout << "}\nelse {" << endl;
 		s->fbody->accept(this);
 	}
-	cout << "endif";
-	return;
+
+	cout << "}\nendif;" << endl;
 }
 
 void ImpPrinter::visit(WhileStatement *s) {
@@ -123,4 +138,9 @@ int ImpPrinter::visit(CondExp *e) {
 int ImpPrinter::visit(BoolExp *e) {
 	cout << (e->value ? "true" : "false");
 	return 0;
+}
+
+// Comment
+void ImpPrinter::visit(Comment* c) {
+	cout << c->comment << endl;
 }

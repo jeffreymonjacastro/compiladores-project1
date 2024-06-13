@@ -85,6 +85,8 @@ private:
 	bool advance();
 	bool isAtEnd();
 	void parserError(string s);
+	void printCurrentToken();
+	Comment* parseCommment();
 	Program* parseProgram();
 	Body* parseBody();
 	VarDecList* parseVarDecList();

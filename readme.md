@@ -32,27 +32,29 @@ La gramática que se utilizó en el proyecto es la siguiente:
 Program         ::= Body
 Body            ::= VarDecList StatementList 
 VarDecList      ::= (VarDec)*
-VarDec          ::= "var" Type VarList ";" ("//" Comment)?
+VarDec          ::= "var" Type VarList ";" (Comment)?
 Type            ::= id
 VarList         ::= id ("," id)*
-StatementList   ::= (Stm)+ 
-Stm             ::= id "=" Exp ";" ("//" Comment)?           |
-                    "print" "(" Exp ")" ";" ("//" Comment)?  |
-                    "if" Exp "then" Body "else" Body "endif" |
-                    "while" Exp "do" Body "endwhile"         |
-                    "do" Body "while" Exp "enddo"            |
+StatementList   ::= (Stm)+
+Stm             ::= id "=" Exp ";" (Comment)?                           |
+                    "print" "(" Exp ")" ";" (Comment)?                  |
+                    "if" Exp "then" Body "else" Body "endif"            |
+                    "while" Exp "do" Body "endwhile"                    |
+                    "do" Body "while" Exp "enddo"             
 Exp             ::= BExp
 BExp            ::= CEXP (("and" | "or") BExp)?
 CEXP            ::= AExp (("==" | "<" | "<=" ) AExp)?
 AExp            ::= Term (("+" | "-") Term)*
 Term            ::= FExp (("*" | "/") FExp)*
 FExp            ::= Factor ("**" FExp)?
-Factor          ::= id                                                       | 
-                    num                                                      | 
-                    true                                                     |
-                    false                                                    |
-                    "(" Exp ")"                                              | 
+Factor          ::= id                                                  | 
+                    num                                                 | 
+                    true                                                |
+                    false                                               |
+                    "(" Exp ")"                                         | 
                     "ifexp" "(" Exp "," Exp "," Exp ")"
+Comment         ::= "//" (~("\n"))*
+
 ```
 
 ## 1. Typechecker y Codegen
@@ -87,6 +89,7 @@ Respuesta
 
 
 ## 2. Generación de Código I
+
 
 
 > **⚠️ Reporte: ¿Qué cambios se hicieron al scanner y/o parser para lograr la inclusión de comentarios?**  \

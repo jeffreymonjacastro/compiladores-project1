@@ -143,23 +143,27 @@ ImpType BoolExp::accept(TypeVisitor *v) {
 
 // ############################# STATEMENTS ################################
 
-AssignStatement::AssignStatement(string id, Exp *e, string comment) : id(id), rhs(e), comment(comment) {}
+AssignStatement::AssignStatement(string id, Exp *e, Comment* cmt) : id(id), rhs(e), cmt(cmt) {}
 
-PrintStatement::PrintStatement(Exp *e, string comment) : e(e), comment(comment) {}
+PrintStatement::PrintStatement(Exp *e, Comment* cmt) : e(e), cmt(cmt) {}
 
-IfStatement::IfStatement(Exp *c, Body *tb, Body *fb, string comment) : cond(c), tbody(tb), fbody(fb), comment(comment) {}
+IfStatement::IfStatement(Exp *c, Body *tb, Body *fb, Comment* cmt) : cond(c), tbody(tb), fbody(fb), cmt(cmt) {}
 
-WhileStatement::WhileStatement(Exp *c, Body *b, string comment) : cond(c), body(b), comment(comment) {}
+WhileStatement::WhileStatement(Exp *c, Body *b, Comment* cmt) : cond(c), body(b), cmt(cmt) {}
 
 StatementList::StatementList() : slist() {}
 
-VarDec::VarDec(string type, list<string> vars, string comment) : type(type), vars(vars), comment(comment) {}
+VarDec::VarDec(string type, list<string> vars, Comment* cmt) : type(type), vars(vars), cmt(cmt) {}
 
 VarDecList::VarDecList() : vdlist() {}
 
 Body::Body(VarDecList *vdl, StatementList *sl) : var_decs(vdl), slist(sl) {}
 
 Program::Program(Body *b) : body(b) {}
+
+Comment::Comment() {}
+
+Comment::Comment(string comment): comment(comment) {}
 
 Stm::~Stm() {}
 
@@ -190,6 +194,8 @@ Body::~Body() {
 }
 
 Program::~Program() { delete body; }
+
+Comment::~Comment() {}
 
 // ImpVisitor
 void AssignStatement::accept(ImpVisitor *v) {
@@ -229,6 +235,10 @@ void Body::accept(ImpVisitor *v) {
 }
 
 void Program::accept(ImpVisitor *v) {
+	return v->visit(this);
+}
+
+void Comment::accept(ImpVisitor *v) {
 	return v->visit(this);
 }
 

@@ -89,7 +89,6 @@ public:
 	~BoolExp();
 };
 
-
 class Stm {
 public:
 	virtual void accept(ImpVisitor* v) = 0;
@@ -100,13 +99,14 @@ public:
 
 class StatementList;
 class Body;
+class Comment;
 
 class AssignStatement : public Stm {
 public:
 	string id;
 	Exp* rhs;
-	string comment;
-	AssignStatement(string id, Exp* e, string comment);
+	Comment* cmt;
+	AssignStatement(string id, Exp* e, Comment* cmt);
 	void accept(ImpVisitor* v);
 	void accept(ImpValueVisitor* v);
 	void accept(TypeVisitor* v);
@@ -116,8 +116,8 @@ public:
 class PrintStatement : public Stm {
 public:
 	Exp* e;
-	string comment;
-	PrintStatement(Exp* e, string comment);
+	Comment* cmt;
+	PrintStatement(Exp* e, Comment* cmt);
 	void accept(ImpVisitor* v);
 	void accept(ImpValueVisitor* v);
 	void accept(TypeVisitor* v);
@@ -128,8 +128,8 @@ class IfStatement : public Stm {
 public:
 	Exp* cond;
 	Body *tbody, *fbody;
-	string comment;
-	IfStatement(Exp* c, Body* tbody, Body *fbody, string comment);
+	Comment* cmt;
+	IfStatement(Exp* c, Body* tbody, Body *fbody, Comment* cmt);
 	void accept(ImpVisitor* v);
 	void accept(ImpValueVisitor* v);
 	void accept(TypeVisitor* v);
@@ -140,8 +140,8 @@ class WhileStatement : public Stm {
 public:
 	Exp* cond;
 	Body *body;
-	string comment;
-	WhileStatement(Exp* c, Body* b, string comment);
+	Comment* cmt;
+	WhileStatement(Exp* c, Body* b, Comment* cmt);
 	void accept(ImpVisitor* v);
 	void accept(ImpValueVisitor* v);
 	void accept(TypeVisitor* v);
@@ -163,9 +163,9 @@ public:
 class VarDec {
 public:
 	string type;
-	string comment;
 	list<string> vars;
-	VarDec(string type, list<string> vars, string comment);
+	Comment* cmt;
+	VarDec(string type, list<string> vars, Comment* cmt);
 	void accept(ImpVisitor* v);
 	void accept(ImpValueVisitor* v);
 	void accept(TypeVisitor* v);
@@ -206,6 +206,15 @@ public:
 	~Program();
 };
 
+// Comment class
+class Comment {
+public:
+	string comment;
+	Comment();
+	Comment(string comment);
+	void accept(ImpVisitor* v);
+	~Comment();
+};
 
 
 #endif
