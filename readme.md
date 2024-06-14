@@ -21,6 +21,11 @@ En este proyecto se implementaron mejoras al compilador del lenguaje IMP-DEC que
     - [1.2. Codegen](#12-codegen)
     - [Ejemplo de uso](#ejemplo-de-uso)
   - [2. Generación de Código I](#2-generación-de-código-i)
+    - [Cambios en el Scanner](#cambios-en-el-scanner)
+    - [Cambios en el Parser](#cambios-en-el-parser)
+      - [Comentarios al final de una declaración de variable o statement](#comentarios-al-final-de-una-declaración-de-variable-o-statement)
+      - [Comentarios aislados en cualquier parte del código](#comentarios-aislados-en-cualquier-parte-del-código)
+    - [Cambios en el ImpPrinter](#cambios-en-el-impprinter)
   - [3. Sentencia Do While](#3-sentencia-do-while)
   - [Autores](#autores)
   - [Referencias](#referencias)
@@ -31,27 +36,27 @@ La gramática que se utilizó en el proyecto es la siguiente:
 ```js
 Program         ::= Body
 Body            ::= VarDecList StatementList  
-VarDecList      ::= (VarDec)* 
+VarDecList      ::= (VarDec | Comment)* 
 VarDec          ::= "var" Type VarList ";" (Comment)?
 Type            ::= id
 VarList         ::= id ("," id)*
-StatementList   ::= (Stm)+
-Stm             ::= id "=" Exp ";" (Comment)?                           |
-                    "print" "(" Exp ")" ";" (Comment)?                  |
-                    "if" Exp "then" Body ("else" Body)? "endif" ";"     |
-                    "while" Exp "do" Body "endwhile" ";"                |
-                    "do" Body "while" Exp "enddo" ";"         
+StatementList   ::= (Stm ";" (Comment)? | Comment)*
+Stm             ::= id "=" Exp                               |
+                    "print" "(" Exp ")"                      |
+                    "if" Exp "then" Body "else" Body "endif" |
+                    "while" Exp "do" Body "endwhile"         |
+                    "do" Body "while" Exp "enddo"                    
 Exp             ::= BExp
 BExp            ::= CEXP (("and" | "or") BExp)?
 CEXP            ::= AExp (("==" | "<" | "<=" ) AExp)?
 AExp            ::= Term (("+" | "-") Term)*
 Term            ::= FExp (("*" | "/") FExp)*
 FExp            ::= Factor ("**" FExp)?
-Factor          ::= id                                                  | 
-                    num                                                 | 
-                    true                                                |
-                    false                                               |
-                    "(" Exp ")"                                         | 
+Factor          ::= id                                       | 
+                    num                                      | 
+                    true                                     |
+                    false                                    |
+                    "(" Exp ")"                              | 
                     "ifexp" "(" Exp "," Exp "," Exp ")"
 Comment         ::= "//" (~("\n"))*
 ```
@@ -94,16 +99,33 @@ Para calcular la memoria necesaria tanto para las variables globales como para l
 
 En esta sección se describe la implementación de la inclusión de comentarios en el código fuente.
 
-Como se ve en la [gramática](#gramática-del-lenguaje-imp-dec), se añadió la regla `Comment ::= "//" (~("\n"))` que permite la inclusión de comentarios en el código fuente. Esta regla permite que se incluyan comentarios de una sola línea al final de una **declaración de variable (`VarDec`), asignación (`AssignStm`) y de una impresión (`PrintStm`)**.
+Como se ve en la [gramática](#gramática-del-lenguaje-imp-dec), se añadió la regla `Comment ::= "//" (~("\n"))` que permite la inclusión de comentarios en el código fuente. Esta regla permite que se incluyan comentarios de una sola línea al final de una **declaración de variable (`VarDec`), o statement (`Stm`)**, así como comentarios aislados **en cualquier parte del código**.
 
 Para implementar esta funcionalidad se modificó ligeramente la gramática:
 
-+ `VarDec`, `AssignStm` y `PrintStm` tienen al final un `Comment` opcional.
-+ Se modificó el `StatementList` para que cada `Stm` esté seguido de un `;` y luego de un `Comment` opcional.
++ Se modificó el `VarDecList` para que pueda aceptar un `VarDec` o un `Comment`
   
 ```js
-StatementList ::= Stm (“;” Stm)*  ➡️  StatementList ::= (Stm)+
+// Antes                       Después
+VarDecList ::= (VarDec)*  ➡️  VarDecList ::= (VarDec | Comment)*
 ```
+
++ `VarDec` tienen al final un `Comment` opcional.
+
+```js
+// Antes                              Después
+VarDec ::= "var" Type VarList ";"  ➡️  VarDec ::= "var" Type VarList ";" (Comment)?
+```
+
++ Se modificó el `StatementList` para que cada `Stm` esté seguido de un `;` y luego de un `Comment` opcional o sea un `Comment` solo.
+  
+```js
+// Antes                              Después
+StatementList ::= Stm (“;” Stm)*  ➡️  StatementList ::= (Stm ";" (Comment)? | Comment)*
+```
+
++ Se añadió la regla `Comment ::= "//" (~("\n"))*` que permite la inclusión de comentarios en el código fuente.
+
 
 ### Cambios en el Scanner
 
@@ -158,10 +180,18 @@ Token *Scanner::nextToken(){
 
 ### Cambios en el Parser
 
-Para que el Parser soporte la inclusión de comentarios en el código fuente, se creó una nueva clase `Comment`, la cual almacenará el comentario, en el archivo `imp.hh`. 
+Para que el Parser soporte la inclusión de comentarios de una sola línea en el código fuente, se consideraron dos casos:
+1. Comentarios al final de una declaración de variable (`VarDec`) o statement (`Stm`).
+2. Comentarios aislados en cualquier parte del código.
+
+#### Comentarios al final de una declaración de variable o statement
+
+Después de cada `VarDec` o `Stm` se puede incluir un comentario, como en la [gramática](#gramática-del-lenguaje-imp-dec). Para ello, se creó una nueva clase `Comment` la cual almacenará el comentario al final de un `VarDec` o `Stm`. 
+
 
 ```cpp
-// Comment class
+/* imp.hh */
+// Clase Comment para los comentarios en línea
 class Comment {
 public:
 	string comment;
@@ -172,11 +202,11 @@ public:
 };
 ```
 
-Además, se agregó como atributo de la clase `VarDec`, `AssignStm` y `PrintStm` un puntero a un objeto de tipo `Comment` en el archivo `imp.hh` y sus respectivas definiciones en el archivo `imp.cpp`.
+Además, se agregó como atributo de las clases derivadas de `Stm` y de `VarDec` un puntero a un objeto de tipo `Comment` para almacenar comentarios en línea. 
 
 ```cpp
-
-// imp.hh
+/* imp.hh */
+// Modificación del AssignStatement
 class AssignStatement : public Stm {
 public:
   ...
@@ -185,40 +215,23 @@ public:
   ...
 };
 
-class PrintStatement : public Stm {
-public:
-  ...
-  Comment* cmt;
-  PrintStatement(Exp* exp, Comment* cmt);
-  ...
-};
+// La misma modificación se realizó en cada Stm y VarDeclaration
 
-class VarDec {
-public:
-  ...
-  Comment* cmt;
-  VarDec(Type* type, VarList* varList, Comment* cmt);
-  ...
-};
-
-// imp.cpp
-// Se modificaron sus constructores 
+/* imp.cpp */
+// Se modificaron los constructores 
 ```
 
-Luego, se agregó un nuevo método para parsear el comentario en el archivo `imp_parser.cpp`.
+Luego, se agregó un nuevo método para parsear el comentario 
 
 ```cpp
+/* imp_parser.hh */
 class Parser {
   ...
   Comment* parseComment();
   ...
 };
-```
 
-Y finalmente, se modificó el parseo de las reglas `VarDec`, `AssignStm` y `PrintStm` para que puedan incluir comentarios de acuerdo a la [gramática](#gramática-del-lenguaje-imp-dec) en el archivo `imp_parser.cpp`.
-
-```cpp
-// parser de Comment
+/* imp_parser.cpp */
 Comment *Parser::parseCommment() {
 	Comment *c = NULL;
 	if (match(Token::COMMENT)) {
@@ -226,35 +239,20 @@ Comment *Parser::parseCommment() {
 	}
 	return c;
 }
+```
 
-// parser de VarDec
+Y finalmente, se modificó el parseo de las reglas de `Stm` y `VarDec` para que puedan incluir comentarios de acuerdo a la [gramática](#gramática-del-lenguaje-imp-dec).
+
+```cpp
+/* imp_parser.cpp */
+
+// Modificación al parser de VarDec
 VarDec *Parser::parseVarDec() {
 	VarDec *vd = NULL;
 
 	if (match(Token::VAR)) {
 		Comment* comment = NULL;
-		if (!match(Token::ID))
-			parserError("Expecting type in var declaration");
-
-		string var, type = previous->lexema;
-		list<string> vars;
-
-		if (!match(Token::ID))
-			parserError("Expecting id in var declaration");
-
-		var = previous->lexema;
-		vars.push_back(var);
-
-		while (match(Token::COMMA)) {
-			if (!match(Token::ID))
-				parserError("Expecting id in comma in var declaration");
-			var = previous->lexema;
-			vars.push_back(var);
-		}
-
-		if (!match(Token::SEMICOLON))
-			parserError("Expecting semicolon at end of var declaration");
-
+        ...
 		comment = parseCommment();
 
 		vd = new VarDec(type, vars, comment);
@@ -262,7 +260,7 @@ VarDec *Parser::parseVarDec() {
 	return vd;
 }
 
-// parser de StatementList
+// Modificación al parser de StatementList
 StatementList *Parser::parseStatementList() {
 	StatementList *p = new StatementList();
 	Stm* stm;
@@ -275,7 +273,7 @@ StatementList *Parser::parseStatementList() {
 	return p;
 }
 
-// parser de Stm (AssignStm y PrintStm)
+// Modificación al parser de Stm
 Stm *Parser::parseStatement() {
 	Stm *s = NULL;
 	Exp *e;
@@ -284,68 +282,228 @@ Stm *Parser::parseStatement() {
 
 	// AssignStatement Parser
 	if (match(Token::ID)) {
-		string lex = previous->lexema;
-		if (!match(Token::ASSIGN)) {
-			parserError("Expecting assignment (=) operator");
-		}
-
-		e = parseBExp();
-
-		if (!match(Token::SEMICOLON))
-			parserError("Expecting semicolon at end of AssigmentStatement declaration");
-
+		...
 		comment = parseCommment();
-
 		s = new AssignStatement(lex, e, comment);
 
 	// PrintStatement Parser
 	} else if (match(Token::PRINT)) {
-		if (!match(Token::LPAREN)) {
-			parserError("Expecting left parenthesis '(' ");
-		}
-		e = parseBExp();
-		if (!match(Token::RPAREN)) {
-			parserError("Expecting right parenthesis ')' ");
-		}
-		if (!match(Token::SEMICOLON))
-			parserError("Expecting semicolon at end of PrintStatement declaration");
-
+		...
 		comment = parseCommment();
-
 		s = new PrintStatement(e, comment);
   }
-  ...
+  
+  // Se realizó lo mismo para los demás Stm
+
   return s;
 }
 ```
 
-### Cambios en el ImpPrinter
+#### Comentarios aislados en cualquier parte del código
 
-Como los comentarios no son necesarios para el análisis Semántico, se modificó solamente el `ImpVisitor` y `ImpPrinter` para que imprima los comentarios en el código fuente.
+Los comentarios aislados pueden ir en cualquier parte del código. Para ello, se crearon dos nuevas clases que solo contendrán un comentario: 
+  + `CommentStatement` que hereda de `Stm`
+  + `CommentVarDec` que hereda de `VarDec`
+
+> **Nota:** Se definió a `VarDec` como una interfaz que hereda a `VarDeclaration` (que contiene la declaración de variables) y `CommentVarDec` (que contiene el comentario). Con el fin de que `VarDecList` pueda aceptar ambos.
 
 ```cpp
-// imp_visitor.cpp
+/* imp.hh */
+// Comentarios aislados en los statements
+class CommentStatement : public Stm {
+public:
+	string comment;
+	CommentStatement(string comment);
+	void accept(ImpVisitor* v);
+	void accept(ImpValueVisitor* v);
+	void accept(TypeVisitor* v);
+	~CommentStatement();
+};
+
+// Interfaz VarDec
+class VarDec {
+public:
+	bool isComment;
+	VarDec(bool ic);
+	virtual void accept(ImpVisitor* v) = 0;
+	virtual void accept(ImpValueVisitor* v) = 0;
+	virtual void accept(TypeVisitor* v) = 0;
+	virtual ~VarDec() = 0;
+};
+
+// Comentarios aislados en la declaración de variables
+class CommentVarDec : public VarDec {
+public:
+	string comment;
+	CommentVarDec(string comment);
+	void accept(ImpVisitor* v);
+	void accept(ImpValueVisitor* v);
+	void accept(TypeVisitor* v);
+	~CommentVarDec();
+};
+```
+
+Luego, se modificó el parser para que pueda parsear los comentarios aislados en cualquier parte del código.
+
+```cpp
+/* imp_parser.cpp */
+// Modificación al parser de VarDec
+VarDec *Parser::parseVarDec() {
+	VarDec *vd = NULL;
+
+	if (match(Token::COMMENT)){
+		vd = new CommentVarDec(previous->lexema);
+	} else if (match(Token::VAR)) {
+    ...
+    vd = new VarDeclaration(type, vars, comment);
+  }
+  return vd;
+}
+
+// Modificación al parser de Stm
+Stm *Parser::parseStatement() {
+	Stm *s = NULL;
+  ...
+  else if(match(Token::COMMENT)){
+    s = new CommentStatement(previous->lexema);
+  }
+}
+```
+
+
+### Cambios en los visitors
+
+#### ImpVisitor
+
+Se modificó el `ImpVisitor` y `ImpPrinter` para que imprima los comentarios en el código fuente.
+
+```cpp
+/* imp_visitor.hh */
 class ImpVisitor {
 public:
   ...
+  virtual void visit(VarDeclaration* e) = 0;
+  virtual void visit(CommentVarDec* e) = 0;
+  virtual void visit(CommentStatement* e) = 0;
   virtual void visit(Comment* e) = 0;
   ...
 }
 
-// imp_printer.cpp
+/* imp_printer.hh */
 class ImpPrinter : public ImpVisitor {
 public:
   ...
+  void visit(VarDeclaration*);
+	void visit(CommentVarDec*);
+  void visit(CommentStatement*);
   void visit(Comment* e);
   ...
 }
 ```
 
-Y se 
+Y se establecieron algunas reglas de printeo para los comentarios en el `ImpPrinter`.
+
+```cpp
+/* imp_printer.cpp */
+// Modificación del VarDeclaration
+void ImpPrinter::visit(VarDeclaration *vd) {
+  ...
+  if (vd->cmt == NULL){
+		cout << ";" << endl;
+		return;
+	}
+
+	cout << ";\t";
+	vd->cmt->accept(this);
+}
+
+// Se realizó lo mismo para los demás Stm que tienen comentarios en línea como atributo 
+
+void ImpPrinter::visit(CommentVarDec *c) {
+	cout << c->comment << endl;
+}
+
+void ImpPrinter::visit(CommentStatement *s) {
+	cout << s->comment << endl;
+}
+
+void ImpPrinter::visit(Comment* c) {
+	cout << c->comment << endl;
+}
+```
+
+#### ImpValueVisitor e ImpTypeVisitor
+
+Como los comentarios no afectan la semántica del programa, no se realizaron cambios sustanciales en estos visitors. No obstante, para que no se genere un error al visitar un comentario, se añadió un método `accept` en las nuevas clases que solo se ignorarán.
+
+```cpp
+/* imp_interpreter.hh */
+void ImpInterpreter::visit(CommentStatement *s) {
+	return;
+}
+
+void ImpInterpreter::visit(CommentVarDec *c) {
+	return;
+}
+
+/* imp_typechecker.hh */
+// Se realizó lo mismo para el TypeChecker
+```
+
+### Ejemplo de funcionamiento
+
+La inclusión de comentarios en el código fuente se puede ver en el siguiente ejemplo:
+
+Input: 
+```txt
+var int x, y; // Enteros
+// Booleana
+var bool b;
+x = 3; // Asignacion
+b = x < 5; // Comparacion
+if b then
+    y = x*2; // Multiplicacion
+else // Multiplicacion 2
+    y = x*3;
+endif; // Fin del if
+// Print
+print(y);
+
+```
+
+Output:
+```txt
+Program :
+var int x, y;   // Enteros
+// Booleana
+var bool b;
+x = 3;  // Asignacion
+b = x < 5;      // Comparacion
+if (b) then {
+y = x * 2;      // Multiplicacion
+}
+else {
+// Multiplicacion 2
+y = x * 3;
+}
+endif;  // Fin de if
+// Print
+print(y);
+
+Type checking:
+Type checking OK
+
+Run program:
+6
+```
+
+### Consideraciones finales
+
+Es complicado manejar los comentarios en el código fuente, ya que estos pueden estar en cualquier parte del código. Por ello, se decidió implementar dos tipos de comentarios: los comentarios en línea y los comentarios aislados. Los comentarios en línea se pueden incluir al final de una declaración de variable o statement, mientras que los comentarios aislados pueden ir en cualquier parte del código. Aun así, hay casos en los que los comentarios no se imprimen correctamente, como en el caso de los comentarios aislados que están al final de un `if` o `else`. Finalmente, se puede mejorar la implementación de los comentarios para que se puedan incluir comentarios de bloque.
 
 
 > **⚠️ Reporte: ¿Qué cambios se hicieron al scanner y/o parser para lograr la inclusión de comentarios?**  \
-Respuesta
+Como se vió en la sección anterior [2. Generación de Código I](#2-generación-de-código-i), se modificó el Scanner para que asigne un token a los comentarios y el Parser para que pueda parsear los comentarios de acuerdo a la gramática para así poder imprimirlos.
 
 
 ## 3. Sentencia Do While 

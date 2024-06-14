@@ -143,6 +143,8 @@ ImpType BoolExp::accept(TypeVisitor *v) {
 
 // ############################# STATEMENTS ################################
 
+Stm::Stm(bool ic): isComment(ic) {}
+
 AssignStatement::AssignStatement(string id, Exp *e, Comment* cmt) : id(id), rhs(e), cmt(cmt) {}
 
 PrintStatement::PrintStatement(Exp *e, Comment* cmt) : e(e), cmt(cmt) {}
@@ -151,9 +153,15 @@ IfStatement::IfStatement(Exp *c, Body *tb, Body *fb, Comment* cmt) : cond(c), tb
 
 WhileStatement::WhileStatement(Exp *c, Body *b, Comment* cmt) : cond(c), body(b), cmt(cmt) {}
 
+CommentStatement::CommentStatement(string comment): comment(comment), Stm(true) {}
+
 StatementList::StatementList() : slist() {}
 
-VarDec::VarDec(string type, list<string> vars, Comment* cmt) : type(type), vars(vars), cmt(cmt) {}
+VarDec::VarDec(bool ic) : isComment(ic) {}
+
+VarDeclaration::VarDeclaration(string type, list<string> vars, Comment* cmt) : type(type), vars(vars), cmt(cmt), VarDec(false) {}
+
+CommentVarDec::CommentVarDec(string comment) : comment(comment), VarDec(true) {}
 
 VarDecList::VarDecList() : vdlist() {}
 
@@ -182,7 +190,13 @@ WhileStatement::~WhileStatement() {
 	delete cond;
 }
 
+CommentStatement::~CommentStatement() {}
+
 StatementList::~StatementList() {}
+
+VarDeclaration::~VarDeclaration() {}
+
+CommentVarDec::~CommentVarDec() {}
 
 VarDec::~VarDec() {}
 
@@ -214,13 +228,21 @@ void WhileStatement::accept(ImpVisitor *v) {
 	return v->visit(this);
 }
 
+void CommentStatement::accept(ImpVisitor *v) {
+	return v->visit(this);
+}
+
 void StatementList::add(Stm *s) { slist.push_back(s); }
 
 void StatementList::accept(ImpVisitor *v) {
 	return v->visit(this);
 }
 
-void VarDec::accept(ImpVisitor *v) {
+void VarDeclaration::accept(ImpVisitor *v) {
+	return v->visit(this);
+}
+
+void CommentVarDec::accept(ImpVisitor *v) {
 	return v->visit(this);
 }
 
@@ -260,11 +282,19 @@ void WhileStatement::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
 
+void CommentStatement::accept(ImpValueVisitor *v) {
+	return v->visit(this);
+}
+
 void StatementList::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
 
-void VarDec::accept(ImpValueVisitor *v) {
+void VarDeclaration::accept(ImpValueVisitor *v) {
+	return v->visit(this);
+}
+
+void CommentVarDec::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
 
@@ -297,11 +327,19 @@ void WhileStatement::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
 
+void CommentStatement::accept(TypeVisitor *v) {
+	return v->visit(this);
+}
+
 void StatementList::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
 
-void VarDec::accept(TypeVisitor *v) {
+void VarDeclaration::accept(TypeVisitor *v) {
+	return v->visit(this);
+}
+
+void CommentVarDec::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
 

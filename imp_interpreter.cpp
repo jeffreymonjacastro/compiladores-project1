@@ -31,7 +31,7 @@ void ImpInterpreter::visit(VarDecList *decs) {
 	return;
 }
 
-void ImpInterpreter::visit(VarDec *vd) {
+void ImpInterpreter::visit(VarDeclaration *vd) {
 	list<string>::iterator it;
 	ImpValue v;
 	ImpType tt = ImpValue::get_basic_type(vd->type);
@@ -43,6 +43,10 @@ void ImpInterpreter::visit(VarDec *vd) {
 	for (it = vd->vars.begin(); it != vd->vars.end(); ++it) {
 		env.add_var(*it, v);
 	}
+	return;
+}
+
+void ImpInterpreter::visit(CommentVarDec *c) {
 	return;
 }
 
@@ -101,6 +105,10 @@ void ImpInterpreter::visit(WhileStatement *s) {
 		s->body->accept(this);
 		v = s->cond->accept(this);
 	}
+	return;
+}
+
+void ImpInterpreter::visit(CommentStatement *s) {
 	return;
 }
 

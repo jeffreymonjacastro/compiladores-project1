@@ -31,7 +31,7 @@ void ImpTypeChecker::visit(VarDecList *decs) {
 	return;
 }
 
-void ImpTypeChecker::visit(VarDec *vd) {
+void ImpTypeChecker::visit(VarDeclaration *vd) {
 	list<string>::iterator it;
 	ImpType tt = ImpValue::get_basic_type(vd->type);
 	if (tt == NOTYPE) {
@@ -44,6 +44,9 @@ void ImpTypeChecker::visit(VarDec *vd) {
 	return;
 }
 
+void ImpTypeChecker::visit(CommentVarDec *c) {
+	return;
+}
 
 void ImpTypeChecker::visit(StatementList *s) {
 	list<Stm *>::iterator it;
@@ -96,6 +99,10 @@ void ImpTypeChecker::visit(WhileStatement *s) {
 		exit(0);
 	}
 	s->body->accept(this);
+	return;
+}
+
+void ImpTypeChecker::visit(CommentStatement *s) {
 	return;
 }
 
