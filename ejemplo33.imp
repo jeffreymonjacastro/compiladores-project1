@@ -1,10 +1,10 @@
 var int accum, x;
 x = 4;
 accum = 0;
-while 0 < x do
+do
     accum = accum + x;
     x = x - 1;
-endwhile; // Finish While
+enddo while 0 < x; // Fin de bucle
 print(x);
 print(accum);
 

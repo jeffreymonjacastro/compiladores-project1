@@ -41,6 +41,7 @@ public:
 		WHILE,
 		DO,
 		ENDWHILE,
+		ENDDO,
 		ERR,
 		END,
 		VAR,
@@ -48,11 +49,9 @@ public:
 		OR,
 		TRUE,
 		FALSE,
-		NOT,
-		IMPLIES,
 		COMMENT
 	};
-	static const char* token_names[34];
+	static const char* token_names[33];
 	Type type;
 	string lexema;
 	Token(Type);

@@ -102,6 +102,17 @@ void ImpTypeChecker::visit(WhileStatement *s) {
 	return;
 }
 
+void ImpTypeChecker::visit(DoWhileStatement* s) {
+	s->body->accept(this);
+
+	ImpType tcond = s->cond->accept(this);
+	if (tcond != TBOOL) {
+		cout << "Type error en DoWhile: esperaba bool en condicional" << endl;
+		exit(0);
+	}
+	return;
+}
+
 void ImpTypeChecker::visit(CommentStatement *s) {
 	return;
 }

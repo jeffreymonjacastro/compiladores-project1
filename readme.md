@@ -25,7 +25,11 @@ En este proyecto se implementaron mejoras al compilador del lenguaje IMP-DEC que
     - [Cambios en el Parser](#cambios-en-el-parser)
       - [Comentarios al final de una declaración de variable o statement](#comentarios-al-final-de-una-declaración-de-variable-o-statement)
       - [Comentarios aislados en cualquier parte del código](#comentarios-aislados-en-cualquier-parte-del-código)
-    - [Cambios en el ImpPrinter](#cambios-en-el-impprinter)
+    - [Cambios en los visitors](#cambios-en-los-visitors)
+      - [ImpVisitor](#impvisitor)
+      - [ImpValueVisitor e ImpTypeVisitor](#impvaluevisitor-e-imptypevisitor)
+    - [Ejemplo de funcionamiento](#ejemplo-de-funcionamiento)
+    - [Consideraciones finales](#consideraciones-finales)
   - [3. Sentencia Do While](#3-sentencia-do-while)
   - [Autores](#autores)
   - [Referencias](#referencias)
@@ -44,8 +48,8 @@ StatementList   ::= (Stm ";" (Comment)? | Comment)*
 Stm             ::= id "=" Exp                               |
                     "print" "(" Exp ")"                      |
                     "if" Exp "then" Body "else" Body "endif" |
-                    "while" Exp "do" Body "endwhile"         |
-                    "do" Body "while" Exp "enddo"                    
+                    "while" Exp "do" Body "" "endwhile"      |
+                    "do" Body "enddo" "while" Exp                    
 Exp             ::= BExp
 BExp            ::= CEXP (("and" | "or") BExp)?
 CEXP            ::= AExp (("==" | "<" | "<=" ) AExp)?
@@ -144,7 +148,7 @@ class Token {
 }
 
 // imp_parser.cpp
-const char *Token::token_names[34] = {
+const char *Token::token_names[32] = {
   ...
   "COMMENT",
   ...
@@ -503,14 +507,189 @@ Es complicado manejar los comentarios en el código fuente, ya que estos pueden 
 
 
 > **⚠️ Reporte: ¿Qué cambios se hicieron al scanner y/o parser para lograr la inclusión de comentarios?**  \
-Como se vió en la sección anterior [2. Generación de Código I](#2-generación-de-código-i), se modificó el Scanner para que asigne un token a los comentarios y el Parser para que pueda parsear los comentarios de acuerdo a la gramática para así poder imprimirlos.
+Como se vió en esta sección [2. Generación de Código I](#2-generación-de-código-i), se modificó el Scanner para que asigne un token a los comentarios y el Parser para que pueda parsear los comentarios de acuerdo a la gramática para así poder imprimirlos.
 
 
 ## 3. Sentencia Do While 
 
+En esta sección se describe la implementación de la sentencia `do while` en el lenguaje IMP-DEC. Para ello, se añadió la regla `DoWhileStatement` en la [gramática](#gramática-del-lenguaje-imp-dec).
+
+```js
+Stm            ::= "do" Body "enddo" "while" Exp
+```
+
+Para implementar esta sentencia, primero se agregó la palabra reservada "enndo" en el scanner, que determinará el final de la sentencia **do** para proceder con el **while**
+
+```cpp
+// imp_parser.hh
+class Token {
+  enum Type { 
+    ...
+    ENDDO,
+    ...
+  };
+}
+
+// imp_parser.cpp
+const char *Token::token_names[33] = {
+  ...
+  "COMMENT",
+  ...
+};
+
+Scanner::Scanner(string s) : input(s), first(0), current(0) {
+  ...
+	reserved["enddo"] = Token::ENDDO;
+	...
+}
+```
+
+Luego, se creó la clase `DoWhileStatement` que hereda de `Stm` y que contendrá el cuerpo del `do` y la condición del `while`.
+
+```cpp
+/* imp.hh */
+class DoWhileStatement : public Stm {
+public:
+	Body *body;
+	Exp* cond;
+	Comment* cmt;
+	DoWhileStatement(Exp* c, Body *b, Comment* cmt);
+	void accept(ImpVisitor* v);
+	void accept(ImpValueVisitor* v);
+	void accept(TypeVisitor* v);
+	~DoWhileStatement();
+};
+
+/* imp.cpp */
+// Se crearon los constructores y métodos accept
+```
+
+Luego, se modificó el parser para que pueda parsear la sentencia `do while` de acuerdo a la gramática.
+
+```cpp
+/* imp_parser.cpp */
+Stm *Parser::parseStatement() {
+	Stm *s = NULL;
+	Exp *e;
+	Body *tb, *fb;
+	Comment *comment;
+  ...
+  // DoWhileStatement Parser
+	else if (match(Token::DO)){
+		tb = parseBody();
+		if (!match(Token::ENDDO)) {
+			parserError("Expecting 'endwhile'");
+		}
+		if (!match(Token::WHILE)) {
+			parserError("Expecting 'while'");
+		}
+		e = parseBExp();
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of statement declaration");
+		comment = parseCommment();
+		s = new DoWhileStatement(e, tb, comment);
+  }
+  ...
+  return s;
+}
+```
+
+Finalmente, se modificaron los visitors para que puedan visitar la nueva sentencia `DoWhileStatement`.
+
+```cpp
+/* imp_visitor.hh */
+class ImpVisitor {
+public:
+  ...
+  virtual void visit(DoWhileStatement* e) = 0;
+  ...
+}
+
+// Se realizó lo mismo para ImpValueVisitor e ImpTypeVisitor y sus respectivas implementaciones
+
+/* imp_printer.hh */
+void ImpPrinter::visit(DoWhileStatement *s) {
+	cout << "do {" << endl;
+	s->body->accept(this);
+	cout << "} enddo while (";
+	s->cond->accept(this);
+	cout << ");";
+
+	if (s->cmt == NULL){
+		cout << endl;
+		return;
+	}
+
+	cout << "\t";
+	s->cmt->accept(this);
+}
+
+/* imp_interpreter.hh */
+void ImpInterpreter::visit(DoWhileStatement *s) {
+	ImpValue v;
+	do {
+		s->body->accept(this);
+		v = s->cond->accept(this);
+	} while (v.bool_value);
+	return;
+}
+
+/* imp_typechecker.hh */
+void ImpTypeChecker::visit(DoWhileStatement* s) {
+	s->body->accept(this);
+	ImpType tcond = s->cond->accept(this);
+	if (tcond != TBOOL) {
+		cout << "Type error en DoWhile: esperaba bool en condicional" << endl;
+		exit(0);
+	}
+	return;
+}
+```
+
+### Ejemplo de funcionamiento
+
+La sentencia `do-while` se puede ver en el siguiente ejemplo:
+
+Input: 
+```txt
+var int accum, x;
+x = 4;
+accum = 0;
+do
+    accum = accum + x;
+    x = x - 1;
+enddo while 0 < x; // Fin de bucle
+print(x);
+print(accum);
+```
+
+Output:
+```txt
+Program :
+var int accum, x;
+x = 4;
+accum = 0;
+do {
+accum = accum + x;
+x = x - 1;
+} enddo while (0 < x);  // Fin de bucle
+print(x);
+print(accum);
+
+Type checking:
+Type checking OK
+
+Run program:
+0
+10
+```
+
+### Consideraciones finales
+
+Se optó por utilizar el token `enddo` para determinar el final de la sentencia `do` y proceder con el `while`. Aunque se podría haber utilizado un token `while` para determinar el final del `do`, se decidió utilizar `enddo` para que sea más claro el final de la sentencia y diferencialo del `WhileStatement`.
 
 > **⚠️ Reporte: Indicar el cambio a la gramática y los puntos donde se hicieron cambios al código. Además, proveer las definiciones de tcheck y codegen usadas**  \
-Respuesta
+Como se vió en esta sección [3. Sentencia Do While](#3-sentencia-do-while), se añadió la regla `DoWhileStatement` en la gramática y se modificó el parser para que pueda parsear la sentencia `do while` de acuerdo a la gramática. Además, se modificaron los visitors para que puedan visitar la nueva sentencia `DoWhileStatement`.
 
 
 ## Autores

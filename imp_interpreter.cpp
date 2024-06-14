@@ -65,11 +65,6 @@ void ImpInterpreter::visit(AssignStatement *s) {
 		exit(0);
 	}
 	ImpValue lhs = env.lookup(s->id);
-	if (lhs.type != v.type) {
-		cout << "Type Error en Assign: Tipos de variable " << s->id;
-		cout << " y RHS no coinciden" << endl;
-		exit(0);
-	}
 	env.update(s->id, v);
 	return;
 }
@@ -82,10 +77,6 @@ void ImpInterpreter::visit(PrintStatement *s) {
 
 void ImpInterpreter::visit(IfStatement *s) {
 	ImpValue v = s->cond->accept(this);
-	if (v.type != TBOOL) {
-		cout << "Type error en If: esperaba bool en condicional" << endl;
-		exit(0);
-	}
 	if (v.bool_value) {
 		s->tbody->accept(this);
 	} else {
@@ -97,14 +88,19 @@ void ImpInterpreter::visit(IfStatement *s) {
 
 void ImpInterpreter::visit(WhileStatement *s) {
 	ImpValue v = s->cond->accept(this);
-	if (v.type != TBOOL) {
-		cout << "Type error en While: esperaba bool en condicional" << endl;
-		exit(0);
-	}
 	while (v.bool_value) {
 		s->body->accept(this);
 		v = s->cond->accept(this);
 	}
+	return;
+}
+
+void ImpInterpreter::visit(DoWhileStatement *s) {
+	ImpValue v;
+	do {
+		s->body->accept(this);
+		v = s->cond->accept(this);
+	} while (v.bool_value);
 	return;
 }
 
@@ -205,10 +201,7 @@ ImpValue ImpInterpreter::visit(ParenthExp *ep) {
 
 ImpValue ImpInterpreter::visit(CondExp *e) {
 	ImpValue v = e->cond->accept(this);
-	if (v.type != TBOOL) {
-		cout << "Type error en ifexp: esperaba bool en condicional" << endl;
-		exit(0);
-	}
+
 	if (v.bool_value == 0)
 		return e->efalse->accept(this);
 	else

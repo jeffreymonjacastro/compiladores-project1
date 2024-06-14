@@ -101,7 +101,6 @@ void ImpPrinter::visit(IfStatement *s) {
 
 	cout << "}\nendif;\t";
 	s->cmt->accept(this);
-
 }
 
 void ImpPrinter::visit(WhileStatement *s) {
@@ -117,8 +116,22 @@ void ImpPrinter::visit(WhileStatement *s) {
 
 	cout << "}\nendwhile;\t";
 	s->cmt->accept(this);
+}
 
-	return;
+void ImpPrinter::visit(DoWhileStatement *s) {
+	cout << "do {" << endl;
+	s->body->accept(this);
+	cout << "} enddo while (";
+	s->cond->accept(this);
+	cout << ");";
+
+	if (s->cmt == NULL){
+		cout << endl;
+		return;
+	}
+
+	cout << "\t";
+	s->cmt->accept(this);
 }
 
 void ImpPrinter::visit(CommentStatement *s) {

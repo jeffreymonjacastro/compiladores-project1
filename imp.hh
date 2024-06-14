@@ -151,6 +151,18 @@ public:
 	~WhileStatement();
 };
 
+class DoWhileStatement : public Stm {
+public:
+	Body *body;
+	Exp* cond;
+	Comment* cmt;
+	DoWhileStatement(Exp* c, Body *b, Comment* cmt);
+	void accept(ImpVisitor* v);
+	void accept(ImpValueVisitor* v);
+	void accept(TypeVisitor* v);
+	~DoWhileStatement();
+};
+
 class CommentStatement : public Stm {
 public:
 	string comment;

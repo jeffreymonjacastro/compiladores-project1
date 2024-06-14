@@ -3,10 +3,10 @@
 #include "imp_parser.hh"
 
 
-const char *Token::token_names[34] = {
+const char *Token::token_names[33] = {
 		"LPAREN", "RPAREN", "PLUS", "MINUS", "MULT", "DIV", "EXP", "LT", "LTEQ", "EQ",
 		"NUM", "ID", "PRINT", "SEMICOLON", "COMMA", "ASSIGN", "CONDEXP", "IF", "THEN", "ELSE", "ENDIF", "WHILE", "DO",
-		"ENDWHILE", "ERR", "END", "VAR", "AND", "OR", "TRUE", "FALSE", "NOT", "IMPLIES", "COMMENT"};
+		"ENDWHILE", "ENDDO", "ERR", "END", "VAR", "AND", "OR", "TRUE", "FALSE", "COMMENT"};
 
 Token::Token(Type type) : type(type) { lexema = ""; }
 
@@ -36,13 +36,12 @@ Scanner::Scanner(string s) : input(s), first(0), current(0) {
 	reserved["while"] = Token::WHILE;
 	reserved["do"] = Token::DO;
 	reserved["endwhile"] = Token::ENDWHILE;
+	reserved["enddo"] = Token::ENDDO;
 	reserved["var"] = Token::VAR;
 	reserved["and"] = Token::AND;
 	reserved["or"] = Token::OR;
 	reserved["true"] = Token::TRUE;
 	reserved["false"] = Token::FALSE;
-	reserved["not"] = Token::NOT;
-	reserved["implies"] = Token::IMPLIES;
 }
 
 Token *Scanner::nextToken() {
@@ -310,7 +309,6 @@ Stm *Parser::parseStatement() {
 	Exp *e;
 	Body *tb, *fb;
 	Comment *comment;
-
 	// AssignStatement Parser
 	if (match(Token::ID)) {
 		string lex = previous->lexema;
@@ -382,6 +380,27 @@ Stm *Parser::parseStatement() {
 		comment = parseCommment();
 
 		s = new WhileStatement(e, tb, comment);
+
+	// DoWhileStatement Parser
+	} else if (match(Token::DO)){
+		tb = parseBody();
+
+		if (!match(Token::ENDDO)) {
+			parserError("Expecting 'endwhile'");
+		}
+
+		if (!match(Token::WHILE)) {
+			parserError("Expecting 'while'");
+		}
+
+		e = parseBExp();
+
+		if (!match(Token::SEMICOLON))
+			parserError("Expecting semicolon at end of statement declaration");
+
+		comment = parseCommment();
+
+		s = new DoWhileStatement(e, tb, comment);
 
 	// CommentStatement Parser
 	} else if (match(Token::COMMENT)) {

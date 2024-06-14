@@ -153,6 +153,8 @@ IfStatement::IfStatement(Exp *c, Body *tb, Body *fb, Comment* cmt) : cond(c), tb
 
 WhileStatement::WhileStatement(Exp *c, Body *b, Comment* cmt) : cond(c), body(b), cmt(cmt) {}
 
+DoWhileStatement::DoWhileStatement(Exp *c, Body *b, Comment* cmt) : cond(c), body(b), cmt(cmt) {}
+
 CommentStatement::CommentStatement(string comment): comment(comment), Stm(true) {}
 
 StatementList::StatementList() : slist() {}
@@ -186,6 +188,11 @@ IfStatement::~IfStatement() {
 }
 
 WhileStatement::~WhileStatement() {
+	delete body;
+	delete cond;
+}
+
+DoWhileStatement::~DoWhileStatement() {
 	delete body;
 	delete cond;
 }
@@ -225,6 +232,10 @@ void IfStatement::accept(ImpVisitor *v) {
 }
 
 void WhileStatement::accept(ImpVisitor *v) {
+	return v->visit(this);
+}
+
+void DoWhileStatement::accept(ImpVisitor *v) {
 	return v->visit(this);
 }
 
@@ -282,6 +293,10 @@ void WhileStatement::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
 
+void DoWhileStatement::accept(ImpValueVisitor *v) {
+	return v->visit(this);
+}
+
 void CommentStatement::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
@@ -327,6 +342,10 @@ void WhileStatement::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
 
+void DoWhileStatement::accept(TypeVisitor *v) {
+	return v->visit(this);
+}
+
 void CommentStatement::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
@@ -354,9 +373,4 @@ void Body::accept(TypeVisitor *v) {
 void Program::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
-
-
-
-
-
 
