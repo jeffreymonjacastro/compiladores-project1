@@ -40,7 +40,8 @@ void ImpPrinter::visit(VarDec *vd) {
 		return;
 	}
 
-	cout << "; " << vd->cmt->comment << endl;
+	cout << "; ";
+	vd->cmt->accept(this);
 }
 
 void ImpPrinter::visit(StatementList *s) {
@@ -61,7 +62,8 @@ void ImpPrinter::visit(AssignStatement *s) {
 		return;
 	}
 
-	cout << "; " << s->cmt->comment << endl;
+	cout << "; ";
+	s->cmt->accept(this);
 }
 
 void ImpPrinter::visit(PrintStatement *s) {
@@ -74,7 +76,8 @@ void ImpPrinter::visit(PrintStatement *s) {
 		return;
 	}
 
-	cout << "; " << s->cmt->comment << endl;
+	cout << "; ";
+	s->cmt->accept(this);
 }
 
 void ImpPrinter::visit(IfStatement *s) {

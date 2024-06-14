@@ -233,6 +233,10 @@ Program *Parser::parseProgram() {
 }
 
 Body *Parser::parseBody() {
+	Comment* c;
+	if (match(Token::COMMENT))
+		c = parseCommment();
+
 	VarDecList *vdl = parseVarDecList();
 	StatementList *sl = parseStatementList();
 	return new Body(vdl, sl);
