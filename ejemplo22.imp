@@ -1,9 +1,12 @@
-var int x, y; // comment
-var bool b;  // comment
-x = 3;
-if 5 < x then
-    y = x*2;
-else
+var int x, y; // Enteros
+// Booleana
+var bool b;
+x = 3; // Asignacion
+b = x < 5; // Comparacion
+if b then
+    y = x*2; // Multiplicacion
+else // Multiplicacion 2
     y = x*3;
-endif;
-print(y); // print
+endif; // Fin de if
+// Print
+print(y);

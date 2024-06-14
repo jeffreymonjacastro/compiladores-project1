@@ -10,12 +10,14 @@ public:
 	void visit(Program*);
 	void visit(Body*);
 	void visit(VarDecList*);
-	void visit(VarDec*);
+	void visit(VarDeclaration*);
+	void visit(CommentVarDec*); // Comment
 	void visit(StatementList*);
 	void visit(AssignStatement*);
 	void visit(PrintStatement*);
 	void visit(IfStatement*);
 	void visit(WhileStatement*);
+	void visit(CommentStatement*); // Comment
 	void visit(Comment*); // Comment
 
 

@@ -91,6 +91,9 @@ public:
 
 class Stm {
 public:
+	bool isComment = false;
+	Stm(){};
+	Stm(bool ic);
 	virtual void accept(ImpVisitor* v) = 0;
 	virtual void accept(ImpValueVisitor* v)=0;
 	virtual void accept(TypeVisitor* v)=0;
@@ -148,6 +151,16 @@ public:
 	~WhileStatement();
 };
 
+class CommentStatement : public Stm {
+public:
+	string comment;
+	CommentStatement(string comment);
+	void accept(ImpVisitor* v);
+	void accept(ImpValueVisitor* v);
+	void accept(TypeVisitor* v);
+	~CommentStatement();
+};
+
 
 class StatementList {
 public:
@@ -162,14 +175,34 @@ public:
 
 class VarDec {
 public:
+	bool isComment;
+	VarDec(bool ic);
+	virtual void accept(ImpVisitor* v) = 0;
+	virtual void accept(ImpValueVisitor* v) = 0;
+	virtual void accept(TypeVisitor* v) = 0;
+	virtual ~VarDec() = 0;
+};
+
+class VarDeclaration : public VarDec {
+public:
 	string type;
 	list<string> vars;
 	Comment* cmt;
-	VarDec(string type, list<string> vars, Comment* cmt);
+	VarDeclaration(string type, list<string> vars, Comment* cmt);
 	void accept(ImpVisitor* v);
 	void accept(ImpValueVisitor* v);
 	void accept(TypeVisitor* v);
-	~VarDec();
+	~VarDeclaration();
+};
+
+class CommentVarDec : public VarDec {
+public:
+	string comment;
+	CommentVarDec(string comment);
+	void accept(ImpVisitor* v);
+	void accept(ImpValueVisitor* v);
+	void accept(TypeVisitor* v);
+	~CommentVarDec();
 };
 
 

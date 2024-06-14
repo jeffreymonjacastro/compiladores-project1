@@ -233,10 +233,6 @@ Program *Parser::parseProgram() {
 }
 
 Body *Parser::parseBody() {
-	Comment* c;
-	if (match(Token::COMMENT))
-		c = parseCommment();
-
 	VarDecList *vdl = parseVarDecList();
 	StatementList *sl = parseStatementList();
 	return new Body(vdl, sl);
@@ -245,7 +241,11 @@ Body *Parser::parseBody() {
 VarDec *Parser::parseVarDec() {
 	VarDec *vd = NULL;
 
-	if (match(Token::VAR)) {
+	if (match(Token::COMMENT)){
+		vd = new CommentVarDec(previous->lexema);
+	}
+
+	else if (match(Token::VAR)) {
 		Comment* comment = NULL;
 
 		if (!match(Token::ID))
@@ -272,7 +272,7 @@ VarDec *Parser::parseVarDec() {
 
 		comment = parseCommment();
 
-		vd = new VarDec(type, vars, comment);
+		vd = new VarDeclaration(type, vars, comment);
 	}
 	return vd;
 }
@@ -382,6 +382,10 @@ Stm *Parser::parseStatement() {
 		comment = parseCommment();
 
 		s = new WhileStatement(e, tb, comment);
+
+	// CommentStatement Parser
+	} else if (match(Token::COMMENT)) {
+		s = new CommentStatement(previous->lexema);
 	}
 
 	return s;
