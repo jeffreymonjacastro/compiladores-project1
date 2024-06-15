@@ -31,6 +31,8 @@ En este proyecto se implementaron mejoras al compilador del lenguaje IMP-DEC que
     - [Ejemplo de funcionamiento](#ejemplo-de-funcionamiento)
     - [Consideraciones finales](#consideraciones-finales)
   - [3. Sentencia Do While](#3-sentencia-do-while)
+    - [Ejemplo de funcionamiento](#ejemplo-de-funcionamiento-1)
+    - [Consideraciones finales](#consideraciones-finales-1)
   - [Autores](#autores)
   - [Referencias](#referencias)
 
@@ -55,7 +57,8 @@ BExp            ::= CEXP (("and" | "or") BExp)?
 CEXP            ::= AExp (("==" | "<" | "<=" ) AExp)?
 AExp            ::= Term (("+" | "-") Term)*
 Term            ::= FExp (("*" | "/") FExp)*
-FExp            ::= Factor ("**" FExp)?
+FExp            ::= Unary ("**" FExp)?
+Unary						::= "-" Factor | "!" Factor | Factor
 Factor          ::= id                                       | 
                     num                                      | 
                     true                                     |

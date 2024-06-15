@@ -6,14 +6,22 @@
 #include "imp.hh"
 #include "type_visitor.hh"
 #include "environment.hh"
+#include "imp_type.hh"
 
 using namespace std;
 
+using TType = ImpType::TType;
+
 class ImpTypeChecker : public TypeVisitor {
 public:
-  ImpTypeChecker();
+  	ImpTypeChecker();
+	int sp, max_sp, next_direc, mem_locals;
 private:
-  Environment<ImpType> env;
+  	Environment<ImpType> env;
+	ImpType booltype;
+	ImpType inttype;
+	void sp_incr(int n);
+	void sp_decr(int n);
 
 public:
 	void typecheck(Program*);
@@ -31,6 +39,7 @@ public:
 	void visit(CommentStatement*); //Comment
 
 	ImpType visit(BinaryExp* e);
+	ImpType visit(UnaryExp* e);
 	ImpType visit(NumberExp* e);
 	ImpType visit(IdExp* e);
 	ImpType visit(ParenthExp* e);

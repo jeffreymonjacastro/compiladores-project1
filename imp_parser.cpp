@@ -3,10 +3,10 @@
 #include "imp_parser.hh"
 
 
-const char *Token::token_names[33] = {
+const char *Token::token_names[34] = {
 		"LPAREN", "RPAREN", "PLUS", "MINUS", "MULT", "DIV", "EXP", "LT", "LTEQ", "EQ",
 		"NUM", "ID", "PRINT", "SEMICOLON", "COMMA", "ASSIGN", "CONDEXP", "IF", "THEN", "ELSE", "ENDIF", "WHILE", "DO",
-		"ENDWHILE", "ENDDO", "ERR", "END", "VAR", "AND", "OR", "TRUE", "FALSE", "COMMENT"};
+		"ENDWHILE", "ENDDO", "ERR", "END", "VAR", "AND", "OR", "NOT", "TRUE", "FALSE", "COMMENT"};
 
 Token::Token(Type type) : type(type) { lexema = ""; }
 
@@ -67,7 +67,7 @@ Token *Scanner::nextToken() {
 			token = new Token(ttype);
 		else
 			token = new Token(Token::ID, getLexema());
-	} else if (strchr("()+-*/;=<,", c)) {
+	} else if (strchr("()+-*/;=<,!", c)) {
 		switch (c) {
 			case '(':
 				token = new Token(Token::LPAREN);
@@ -105,6 +105,9 @@ Token *Scanner::nextToken() {
 				break;
 			case ',':
 				token = new Token(Token::COMMA);
+				break;
+			case '!':
+				token = new Token(Token::NOT);
 				break;
 			case '=':
 				c = nextChar();
@@ -463,12 +466,25 @@ Exp *Parser::parseTerm() {
 
 Exp *Parser::parseFExp() {
 	Exp *lhs, *rhs;
-	lhs = parseFactor();
+	lhs = parseUnary();
 	if (match(Token::EXP)) {
 		return new BinaryExp(lhs, parseFExp(), EXP);
 	}
 	return lhs;
 }
+
+Exp* Parser::parseUnary() {
+	Exp* e;
+	if (match(Token::MINUS)) {
+		e = new UnaryExp(parseFactor(),NEG);
+	} else if (match(Token::NOT)) {
+		e = new UnaryExp(parseFactor(),NOT);
+	} else {
+		e = parseFactor();
+	}
+	return e;
+}
+
 
 Exp *Parser::parseFactor() {
 	if (match(Token::NUM)) {

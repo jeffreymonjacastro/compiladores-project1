@@ -7,9 +7,9 @@ add_executable(compiladores_project1
         imp_value.cpp
         imp_parser.cpp
         imp_parser.hh
-#        imp_codegen.cpp
+        imp_codegen.cpp
         imp_value.hh
-        imp_test.cpp
+#        imp_test.cpp
         imp_interpreter.cpp
         imp.cpp
         imp_printer.hh
@@ -24,5 +24,7 @@ add_executable(compiladores_project1
         imp.hh
         imp_value_visitor.hh
         imp_interpreter.hh
-#        imp_codegen.hh
+        imp_type.cpp
+        imp_codegen.hh
+        imp_compiler.cpp
 )

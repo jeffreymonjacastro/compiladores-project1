@@ -20,6 +20,7 @@ public:
 	virtual void visit(CommentStatement* e) = 0; // Comment
 
 	virtual ImpType visit(BinaryExp* e) = 0;
+	virtual ImpType visit(UnaryExp* e) = 0;
 	virtual ImpType visit(NumberExp* e) = 0;
 	virtual ImpType visit(IdExp* e) = 0;
 	virtual ImpType visit(ParenthExp* e) = 0;

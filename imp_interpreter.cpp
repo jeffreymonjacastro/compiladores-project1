@@ -34,12 +34,13 @@ void ImpInterpreter::visit(VarDecList *decs) {
 void ImpInterpreter::visit(VarDeclaration *vd) {
 	list<string>::iterator it;
 	ImpValue v;
-	ImpType tt = ImpValue::get_basic_type(vd->type);
-	if (tt == NOTYPE) {
+	ImpType tt;
+	tt.set_basic_type(vd->type);
+	if (tt.ttype == NOTYPE) {
 		cout << "Tipo invalido: " << vd->type << endl;
 		exit(0);
 	}
-	v.set_default_value(tt);
+	v.set_default_value(tt.ttype);
 	for (it = vd->vars.begin(); it != vd->vars.end(); ++it) {
 		env.add_var(*it, v);
 	}
@@ -121,7 +122,7 @@ ImpValue ImpInterpreter::visit(BinaryExp *e) {
 	int iv, iv1, iv2;
 	bool bv1, bv2, bv;
 
-	ImpType type = NOTYPE;
+	TType type = NOTYPE;
 	iv1 = v1.int_value;
 	iv2 = v2.int_value;
 	bv1 = v1.bool_value;
@@ -129,19 +130,19 @@ ImpValue ImpInterpreter::visit(BinaryExp *e) {
 	switch (e->op) {
 		case PLUS:
 			iv = iv1 + iv2;
-			type = TINT;
+			type = INT;
 			break;
 		case MINUS:
 			iv = iv1 - iv2;
-			type = TINT;
+			type = INT;
 			break;
 		case MULT:
 			iv = iv1 * iv2;
-			type = TINT;
+			type = INT;
 			break;
 		case DIV:
 			iv = iv1 / iv2;
-			type = TINT;
+			type = INT;
 			break;
 		case EXP:
 			iv = 1;
@@ -149,39 +150,55 @@ ImpValue ImpInterpreter::visit(BinaryExp *e) {
 				iv *= iv1;
 				iv2--;
 			}
-			type = TINT;
+			type = INT;
 			break;
 		case LT:
 			bv = (iv1 < iv2);
-			type = TBOOL;
+			type = BOOL;
 			break;
 		case LTEQ:
 			bv = (iv1 <= iv2);
-			type = TBOOL;
+			type = BOOL;
 			break;
 		case EQ:
 			bv = (iv1 == iv2);
-			type = TBOOL;
+			type = BOOL;
 			break;
 		case AND:
 			bv = (bv1 && bv2);
-			type = TBOOL;
+			type = BOOL;
 			break;
 		case OR:
 			bv = (bv1 || bv2);
-			type = TBOOL;
+			type = BOOL;
 			break;
 	}
-	if (type == TINT) result.int_value = iv;
+	if (type == INT) result.int_value = iv;
 	else result.bool_value = bv;
 	result.type = type;
 	return result;
 }
 
+ImpValue ImpInterpreter::visit(UnaryExp* e) {
+	ImpValue v = e->e->accept(this);
+	ImpValue result;
+	int iv = v.int_value;
+	int bv = v.bool_value;
+
+	if (e->op == NEG) {
+		result.int_value = -iv;
+		result.type = INT;
+	} else {
+		result.bool_value = !bv;
+		result.type = BOOL;
+	}
+
+	return result;
+}
 
 ImpValue ImpInterpreter::visit(NumberExp *e) {
 	ImpValue v;
-	v.set_default_value(TINT);
+	v.set_default_value(INT);
 	v.int_value = e->value;
 	return v;
 }
@@ -210,7 +227,7 @@ ImpValue ImpInterpreter::visit(CondExp *e) {
 
 ImpValue ImpInterpreter::visit(BoolExp* e) {
 	ImpValue v;
-	v.set_default_value(TBOOL);
+	v.set_default_value(BOOL);
 	v.bool_value = e->value;
 	return v;
 }

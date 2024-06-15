@@ -1,0 +1,10 @@
+alloc 2
+push  2
+store 1
+load 1
+push  3
+mul
+store 2
+load 2
+print
+halt

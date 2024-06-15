@@ -20,6 +20,7 @@ public:
 	virtual void visit(Comment* e) = 0;
 
 	virtual int visit(BinaryExp* e) = 0;
+	virtual int visit(UnaryExp* e) = 0;
 	virtual int visit(NumberExp* e) = 0;
 	virtual int visit(IdExp* e) = 0;
 	virtual int visit(ParenthExp* e) = 0;

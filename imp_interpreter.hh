@@ -9,6 +9,8 @@
 
 using namespace std;
 
+using TType = ImpType::TType;
+
 class ImpInterpreter : public ImpValueVisitor {
 private:
   Environment<ImpValue> env;
@@ -28,6 +30,7 @@ public:
 	void visit(CommentStatement*); // Comment
 
 	ImpValue visit(BinaryExp* e);
+	ImpValue visit(UnaryExp* e);
 	ImpValue visit(NumberExp* e);
 	ImpValue visit(IdExp* e);
 	ImpValue visit(ParenthExp* e);

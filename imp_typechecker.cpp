@@ -1,12 +1,29 @@
 #include "imp_typechecker.hh"
 
-ImpTypeChecker::ImpTypeChecker() {
+void ImpTypeChecker::sp_incr(int n) {
+	sp += n;
+	if (sp > max_sp) max_sp = sp;
+}
 
+void ImpTypeChecker::sp_decr(int n) {
+	sp -= n;
+	if (sp < 0) {
+		cout << "stack less than 0" << endl;
+		exit(0);
+	}
+}
+
+ImpTypeChecker::ImpTypeChecker() {
+	inttype.set_basic_type("int");
+	booltype.set_basic_type("bool");
+	sp = max_sp = next_direc = mem_locals = 0;
 }
 
 void ImpTypeChecker::typecheck(Program *p) {
 	env.clear();
 	p->accept(this);
+//	cout << "Max stack size: " << max_sp << endl;
+//	cout << "Memory for local variables: " << mem_locals << endl;
 	return;
 }
 
@@ -20,6 +37,7 @@ void ImpTypeChecker::visit(Body *b) {
 	b->var_decs->accept(this);
 	b->slist->accept(this);
 	env.remove_level();
+	if (next_direc > mem_locals) mem_locals = next_direc;
 	return;
 }
 
@@ -32,14 +50,17 @@ void ImpTypeChecker::visit(VarDecList *decs) {
 }
 
 void ImpTypeChecker::visit(VarDeclaration *vd) {
-	list<string>::iterator it;
-	ImpType tt = ImpValue::get_basic_type(vd->type);
-	if (tt == NOTYPE) {
+	ImpType type;
+	type.set_basic_type(vd->type);
+	if (type.ttype==ImpType::NOTYPE || type.ttype==ImpType::VOID) {
 		cout << "Tipo invalido: " << vd->type << endl;
 		exit(0);
 	}
+
+	list<string>::iterator it;
 	for (it = vd->vars.begin(); it != vd->vars.end(); ++it) {
-		env.add_var(*it, tt);
+		env.add_var(*it, type);
+		next_direc++;
 	}
 	return;
 }
@@ -64,9 +85,10 @@ void ImpTypeChecker::visit(AssignStatement *s) {
 		exit(0);
 	}
 
-	ImpType lhs = env.lookup(s->id);
+	sp_decr(1);
+	ImpType var_type = env.lookup(s->id);
 
-	if (lhs != type) {
+	if (!type.match(var_type)) {
 		cout << "Type mismatch in assignment" << endl;
 		exit(0);
 	}
@@ -76,17 +98,20 @@ void ImpTypeChecker::visit(AssignStatement *s) {
 
 void ImpTypeChecker::visit(PrintStatement *s) {
 	s->e->accept(this);
+	sp_decr(1);
 	return;
 }
 
 void ImpTypeChecker::visit(IfStatement *s) {
-	ImpType v = s->cond->accept(this);
-	if (v != TBOOL) {
+	ImpType tcond = s->cond->accept(this);
+	if (tcond.ttype != BOOL) {
 		cout << "Type error en If: esperaba bool en condicional" << endl;
 		exit(0);
 	}
 
+	sp_decr(1);
 	s->tbody->accept(this);
+
 	if (s->fbody != NULL)
 		s->fbody->accept(this);
 	return;
@@ -94,10 +119,13 @@ void ImpTypeChecker::visit(IfStatement *s) {
 
 void ImpTypeChecker::visit(WhileStatement *s) {
 	ImpType tcond = s->cond->accept(this);
-	if (tcond != TBOOL) {
+	if (tcond.ttype != BOOL) {
 		cout << "Type error en While: esperaba bool en condicional" << endl;
 		exit(0);
 	}
+
+	sp_decr(1);
+
 	s->body->accept(this);
 	return;
 }
@@ -106,10 +134,12 @@ void ImpTypeChecker::visit(DoWhileStatement* s) {
 	s->body->accept(this);
 
 	ImpType tcond = s->cond->accept(this);
-	if (tcond != TBOOL) {
+	if (tcond.ttype != BOOL) {
 		cout << "Type error en DoWhile: esperaba bool en condicional" << endl;
 		exit(0);
 	}
+
+	sp_decr(1); // OJO
 	return;
 }
 
@@ -122,34 +152,53 @@ ImpType ImpTypeChecker::visit(BinaryExp *e) {
 	ImpType t2 = e->right->accept(this);
 	ImpType result;
 
-	if (t1 != t2) {
+	if (t1.ttype != t2.ttype) {
 		cout << "Los tipos de los operandos no coinciden" << endl;
 		exit(0);
 	}
 
 	switch (e->op) {
-		case PLUS: result = TINT; break;
-		case MINUS: result = TINT; break;
-		case MULT: result = TINT; break;
-		case DIV: result = TINT; break;
-		case EXP: result = TINT; break;
-		case LT: result = TBOOL; break;
-		case LTEQ: result = TBOOL; break;
-		case EQ: result = TBOOL; break;
-		case AND: result = TBOOL; break;
-		case OR: result = TBOOL; break;
+		case PLUS: result.ttype = INT; break;
+		case MINUS: result.ttype = INT; break;
+		case MULT: result.ttype = INT; break;
+		case DIV: result.ttype = INT; break;
+		case EXP: result.ttype = INT; break;
+		case LT: result.ttype = BOOL; break;
+		case LTEQ: result.ttype = BOOL; break;
+		case EQ: result.ttype = BOOL; break;
+		case AND: result.ttype = BOOL; break;
+		case OR: result.ttype = BOOL; break;
 	}
+
+	sp_decr(1);
 	return result;
 }
 
+ImpType ImpTypeChecker::visit(UnaryExp* e) {
+	ImpType etype = e->e->accept(this);
+	ImpType rtype;
+	if (e->op == NEG) rtype.set_basic_type("int");
+	else rtype.set_basic_type("bool");
+	if (!etype.match(rtype)) {
+		cout << "Tipo incorrecto para operacion binaria" << endl;
+		exit(0);
+	}
+	return rtype;
+}
+
 ImpType ImpTypeChecker::visit(NumberExp *e) {
-	ImpType t = TINT;
-	return t;
+	sp_incr(1);
+	return inttype;
 }
 
 ImpType ImpTypeChecker::visit(IdExp *e) {
-	ImpType t = env.lookup(e->id);
-	return t;
+	sp_incr(1);
+	if (env.check(e->id))
+		return env.lookup(e->id);
+	else {
+		cout << "Variable indefinida: " << e->id << endl;
+		exit(0);
+	}
 }
 
 ImpType ImpTypeChecker::visit(ParenthExp *ep) {
@@ -157,20 +206,27 @@ ImpType ImpTypeChecker::visit(ParenthExp *ep) {
 }
 
 ImpType ImpTypeChecker::visit(CondExp *e) {
-	ImpType btype = e->cond->accept(this);
+	ImpType booltype;
+	booltype.set_basic_type("bool");
 
-	if (btype != TBOOL) {
-		cout << "Tipo invalido en condicional" << endl;
+	if (!e->cond->accept(this).match(booltype)) {
+		cout << "Tipo en ifexp debe de ser bool" << endl;
 		exit(0);
 	}
 
-	ImpType ttype = e->etrue->accept(this);
-	ImpType ftype = e->efalse->accept(this);
+	sp_decr(1);
+	int sp_start = sp;
+	ImpType ttype =  e->etrue->accept(this);
+	sp = sp_start;
 
-	return NOTYPE;
+	if (!ttype.match(e->efalse->accept(this))) {
+		cout << "Tipos en ifexp deben de ser iguales" << endl;
+		exit(0);
+	}
+	return ttype;
 }
 
 ImpType ImpTypeChecker::visit(BoolExp *e) {
-	ImpType t = TBOOL;
-	return t;
+	sp_incr(1);
+	return booltype;
 }

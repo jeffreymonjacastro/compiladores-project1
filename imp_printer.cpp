@@ -145,6 +145,14 @@ int ImpPrinter::visit(BinaryExp *e) {
 	return 0;
 }
 
+int ImpPrinter::visit(UnaryExp* e) {
+	UnaryOp op = e->op;
+	if (op==NEG) cout << "-";
+	else if (op==NOT) cout << "!";
+	e->e->accept(this);
+	return 0;
+}
+
 int ImpPrinter::visit(NumberExp *e) {
 	cout << e->value;
 	return 0;

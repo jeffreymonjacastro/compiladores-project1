@@ -47,11 +47,12 @@ public:
 		VAR,
 		AND,
 		OR,
+		NOT,
 		TRUE,
 		FALSE,
 		COMMENT
 	};
-	static const char* token_names[33];
+	static const char* token_names[34];
 	Type type;
 	string lexema;
 	Token(Type);
@@ -97,6 +98,7 @@ private:
 	Exp* parseExpression();
 	Exp* parseTerm();
 	Exp* parseFExp();
+	Exp* parseUnary();
 	Exp* parseFactor();
 
 public:

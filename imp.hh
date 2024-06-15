@@ -17,7 +17,7 @@ class ImpValueVisitor;
 class TypeVisitor;
 
 enum BinaryOp { PLUS, MINUS, MULT, DIV, EXP, LT, LTEQ, EQ, AND, OR};
-
+enum UnaryOp { NEG, NOT };
 
 class Exp {
 public:
@@ -25,6 +25,7 @@ public:
 	virtual ImpValue accept(ImpValueVisitor* v) = 0;
 	virtual ImpType accept(TypeVisitor* v) = 0;
 	static string binopToString(BinaryOp op);
+	static string unopToString(UnaryOp op);
 	virtual ~Exp() = 0;
 };
 
@@ -37,6 +38,17 @@ public:
 	ImpValue accept(ImpValueVisitor* v);
 	ImpType accept(TypeVisitor* v);
 	~BinaryExp();
+};
+
+class UnaryExp : public Exp {
+public:
+	Exp* e;
+	UnaryOp op;
+	UnaryExp(Exp* e, UnaryOp op);
+	int accept(ImpVisitor* v);
+	ImpValue accept(ImpValueVisitor* v);
+	ImpType accept(TypeVisitor* v);
+	~UnaryExp();
 };
 
 class NumberExp : public Exp {

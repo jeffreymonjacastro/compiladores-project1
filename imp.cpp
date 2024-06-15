@@ -29,11 +29,24 @@ string Exp::binopToString(BinaryOp op) {
 	return "";
 }
 
+string Exp::unopToString(UnaryOp op) {
+	switch (op) {
+		case NEG:
+			return "-";
+		case NOT:
+			return "not";
+	}
+	return "";
+
+}
+
 
 // ####################### Expressions #####################################
 
 // Constructors
 BinaryExp::BinaryExp(Exp *l, Exp *r, BinaryOp op) : left(l), right(r), op(op) {}
+
+UnaryExp::UnaryExp(Exp *e, UnaryOp op) : e(e), op(op) {}
 
 NumberExp::NumberExp(int v) : value(v) {}
 
@@ -52,6 +65,8 @@ BinaryExp::~BinaryExp() {
 	delete right;
 }
 
+UnaryExp::~UnaryExp() { delete e; }
+
 NumberExp::~NumberExp() {}
 
 IdExp::~IdExp() {}
@@ -68,6 +83,10 @@ BoolExp::~BoolExp() {}
 
 // ImpVisitor
 int BinaryExp::accept(ImpVisitor *v) {
+	return v->visit(this);
+}
+
+int UnaryExp::accept(ImpVisitor* v) {
 	return v->visit(this);
 }
 
@@ -96,6 +115,10 @@ ImpValue BinaryExp::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
 
+ImpValue UnaryExp::accept(ImpValueVisitor *v) {
+	return v->visit(this);
+}
+
 ImpValue NumberExp::accept(ImpValueVisitor *v) {
 	return v->visit(this);
 }
@@ -118,6 +141,10 @@ ImpValue BoolExp::accept(ImpValueVisitor *v) {
 
 // TypeVisitor
 ImpType BinaryExp::accept(TypeVisitor *v) {
+	return v->visit(this);
+}
+
+ImpType UnaryExp::accept(TypeVisitor *v) {
 	return v->visit(this);
 }
 

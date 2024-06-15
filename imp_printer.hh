@@ -23,6 +23,7 @@ public:
 
 
 	int visit(BinaryExp* e);
+	int visit(UnaryExp* e);
 	int visit(NumberExp* e);
 	int visit(IdExp* e);
 	int visit(ParenthExp* e);
