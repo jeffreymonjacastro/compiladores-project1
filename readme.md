@@ -58,7 +58,7 @@ CEXP            ::= AExp (("==" | "<" | "<=" ) AExp)?
 AExp            ::= Term (("+" | "-") Term)*
 Term            ::= FExp (("*" | "/") FExp)*
 FExp            ::= Unary ("**" FExp)?
-Unary						::= "-" Factor | "!" Factor | Factor
+Unary           ::= "-" Factor | "!" Factor | Factor
 Factor          ::= id                                       | 
                     num                                      | 
                     true                                     |
@@ -82,24 +82,231 @@ Los archivos modificados para implementar el Typechecker son:
 
 #### Implementación del Typechecker
 
-```cpp
-cout << "Hello World" << endl;
+Primero, se modificó el enum **ImpType**, que antes era un atributo de la clase **ImpValue**, creando una clase `ImpType` que contendrá los tipos de las variables.
 
- 
+```cpp
+class ImpType {
+public:
+	enum TType { NOTYPE=0, VOID, INT, BOOL, FUN };
+	static const char* type_names[5];
+	TType ttype;
+	vector<TType> types;
+	bool match(const ImpType&);
+	bool set_basic_type(string s);
+	bool set_basic_type(TType tt);
+	bool set_fun_type(list<string> slist, string s);
+private:
+	TType string_to_type(string s);
+};
 ```
+
+Luego, se creó la interfas **TypeVisitor** que tendrá los métodos visit para cada regla de la gramática. También se creó la clase **ImpTypeChecker** que implementa la interfaz **TypeVisitor**. Finalmente, se implementaron los métodos de visitor para cada regla de la gramática.
+
+Los cambios se pueden ver en los archivos mencionados anteriormente.
 
 
 ### 1.2. Codegen
 
-El Codegen es un visitor que recorre el AST parseado y genera el código intermedio en formato de tres direcciones. El código intermedio generado es almacenado en un vector de strings.
+El Codegen es un visitor que recorre el AST y genera el código máquina en un nuevo archivo.
 
+Los archivos modificados para implementar el Codegen son:
++ `imp_codegen.hh`: Clase **ImpCodeGen** que implementa la interfaz **ImpVisitor**. Este a su vez tiene un Environment de tipo **int** que almacenará las variables en direcciones (key) y sus valores (value).
++ `imp_codegen.cpp`: Definición de la clase **ImpCodeGen**. Aquí se implementan los métodos de visitor para cada regla de la gramática. Además, se almacenará cada instrucción en una variable de tipo **ostringstream** para luego escribirlos en un archivo.
+
+
+#### Modificaciones en el Typechecker 
+
+Para implementar el Codegen, se modificó el Typechecker con el fin de calcular la memoria necesaria para las variables globales y locales previamente. Como el typechecker recorre todo el AST, durante ese proceso también calcula la memoria necesaria. Esto se hizo con el fin de mapear la memoria necesaria antes de la ejecución del codegen y así poder realizar un alloc de la memoria necesaria para las variables globales.
+
+Para ello, se agregaron nuevas variables como contadores en **ImpTypeChecker**, así como dos métodos `sp_incr` y `sp_decr` para incrementar y decrementar el stack pointer.
+
+```cpp
+class ImpTypeChecker : public TypeVisitor {
+public:
+	ImpTypeChecker();
+	int sp, max_sp, next_direc, mem_locals;
+private:
+	Environment<ImpType> env;
+	ImpType booltype;
+	ImpType inttype;
+	void sp_incr(int n);
+	void sp_decr(int n);
+public:
+	// visitors ...
+}
+```
+	
+Se realizó esta modificación con el fin de que el Codegen pueda contener al Typechecker como atributo y así poder acceder a los contadores de memoria.
+
+#### Implementación del Codegen
+
+Primero se creó la clase **ImpCodeGen** que implementa la interfaz **ImpVisitor**. Esta clase tendrá un atributo de tipo **ImpTypeChecker** para poder acceder a los contadores de memoria. Además, se creó un atributo de tipo **ostringstream** para almacenar las instrucciones y un atributo de tipo **ofstream** para escribir las instrucciones en un archivo. Estos cambios se pueden visualizar en el archivo `imp_codegen.hh`.
+
+```cpp
+class ImpCodeGen : public ImpVisitor {
+private:
+	std::ostringstream code; // Código máquina generado
+	string nolabel;
+	int current_label;
+	Environment<int> direcciones;
+	ImpTypeChecker typechecker; // Typechecker
+	int siguiente_direccion, mem_locals;
+	void codegen(string label, string instr);
+	void codegen(string label, string instr, int arg);
+	void codegen(string label, string instr, string jmplabel);
+	string next_label();
+public:
+	// visitors ...
+}
+```
+
+Luego, se implementaron los métodos de visitor para cada regla de la gramática en el archivo `imp_codegen.cpp`. En estos métodos se generan las instrucciones en código máquina y se almacenan en el atributo **code** de tipo **ostringstream** con los métodos `codegen` que se crearon en la clase **ImpCodeGen**. Además, se ejecuta el **Typechecker** al comienzo del programa para calcular la memoria necesaria para las variables globales y locales.
+
+```cpp
+void ImpCodeGen::codegen(Program *p, string outfname) {
+	...
+	// Typechecker execution
+	typechecker.typecheck(p); // Se ejecuta ni bien se ejecuta el codegen
+
+	p->accept(this); // Generación de código
+
+	ofstream outfile;
+	outfile.open(outfname);
+	outfile << code.str();  // Escribir las instrucciones en un archivo .sm
+	outfile.close();
+
+	cout << "Max memory for local variables: " << mem_locals << endl;
+	cout << "Max stack size: " << typechecker.max_sp << endl; // Máximo tamaño de la pila
+	return;
+}
+
+void ImpCodeGen::visit(Program *p) {
+	codegen(nolabel, "alloc", typechecker.mem_locals); // Alloc de la memoria necesaria para las variables locales
+	p->body->accept(this);
+	codegen(nolabel, "halt"); // Fin del programa
+	return;
+}
+```
+
+Los demás cambios se visualilzan en el archivo `imp_codegen.cpp`.
 
 ### Ejemplo de uso
 
+Para utilizar el Typechecker y Codegen se debe ejecutar el siguiente comando:
 
-> **⚠️ Reporte: ¿Cómo se calculó la memoria necesaria para las variables globales?**  \
+```bash
+make compiler
+./compile.exe "ejemplo11.imp"
+```
 
-Para calcular la memoria necesaria tanto para las variables globales como para las variables locales se utilizó el Typechecker.
+Input:
+```txt
+var int i, j;
+i = 1;
+do
+    j = i * 2;
+    print(j);
+    i = i + 1;
+enddo while i < 5;
+```
+
+Output en consola:
+```txt
+Program :
+var int i, j;
+i = 1;
+do {
+j = i * 2;
+print(j);
+i = i + 1;
+} enddo while (i < 5);
+
+Run program:
+2
+4
+6
+8
+
+Compiling to: ejemplo11.imp.sm
+Max memory for local variables: 2
+Max stack size: 2
+```	
+
+Archivo "ejemplo11.imp.sm":
+```txt
+alloc 2
+push  1
+store 1
+L0: skip
+load 1
+push  2
+mul
+store 2
+load 2
+print
+load 1
+push  1
+add
+store 1
+load 1
+push  5
+lt
+jmpz L1
+goto L0
+L1: skip
+halt
+```
+
+
+Ejecutando el svm:
+
+```bash
+make svm
+./svm.exe "ejemplo22.imp.sm"
+```
+
+Output:
+```txt
+Reading program from file ejemplo11.imp.sm
+Program:
+alloc 2
+push 1
+store 1
+L0: skip
+load 1
+push 2
+mult
+store 2
+load 2
+print
+load 1
+push 1
+add
+store 1
+load 1
+push 5
+lt
+jmpz L1
+goto L0
+L1: skip
+halt
+----------------
+Running ....
+2
+4
+6
+8
+Finished
+stack [ 0 5 8 ]
+```
+
+
+### Consideraciones finales
+Como se está trabajando solamente con dos tipos de variable (bool, int), el Enviroment del Codegen es de tipo **int** para facilitar la generación de código. Además, por simplicidad la dirección 0 no se utiliza, por lo que se comienza a contar desde la dirección 1. Del mismo modo, algunas operaciones que no soporta el **svm** no se implementaron en el codegen, como la exponenciación `**` o negación `!`. Finalmente, la generación de código para las funciones aún no está implementado.
+
+
+> **⚠️ Reporte: ¿Cómo se calculó la memoria necesaria para las variables globales?**  \ 
+Para calcular la memoria necesaria tanto para las variables globales como para las variables locales se utilizó el Typechecker como atributo de la clase del Codegen. En el Typechecker se recorre todo el AST, por lo que se creó una variable que almacene la memoria necesaria para las variables globales y locales. Luego, este valor es pasado al Codegen para que pueda realizar un alloc de la memoria necesaria para las variables globales.
 
 
 ## 2. Generación de Código I

@@ -1,4 +1,7 @@
-var int x, y;
-x = 2;
-y = x * 3;
-print(y);
+var int i, j;
+i = 1;
+do
+    j = i * 2;
+    print(j);
+    i = i + 1;
+enddo while i < 5;

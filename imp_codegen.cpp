@@ -32,9 +32,7 @@ void ImpCodeGen::codegen(Program *p, string outfname) {
 	mem_locals = 0;
 
 	// Typechecker execution
-//	cout << "Type checking:" << endl;
 	typechecker.typecheck(p);
-//	cout << "Type checking OK" << endl;
 
 	p->accept(this);
 	ofstream outfile;
